@@ -1,0 +1,363 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>NightLap - 3D Oval Track Racing</title>
+    <link rel="stylesheet" href="/src/style.css" />
+    <!-- Google Fonts for racing typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <!-- 3D Three.js WebGL Canvas -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Racing HUD Overlay -->
+    <div id="hud-container">
+
+      <!-- Top Header Bar -->
+      <header id="hud-header">
+        <!-- Top Left: Title & Audio controls -->
+        <div class="header-left">
+          <div class="game-logo">
+            <span class="logo-text">NIGHT<span class="highlight">LAP</span></span>
+            <span class="circuit-badge">STADIUM OVAL SPEEDWAY</span>
+          </div>
+          <button id="mute-btn" class="hud-pill-btn" title="Toggle Sound">🔊 Sound</button>
+        </div>
+
+        <!-- Top Center: Navigation & Heading ribbon -->
+        <div class="header-center">
+          <!-- Compass Degree & Cardinal Tape -->
+          <div class="compass-wrapper">
+            <div class="compass-indicator">▼</div>
+            <div class="compass-viewport">
+              <div id="compass-tape" class="compass-tape">
+                <!-- Compass marks generated or repeated for smooth wrap -->
+                <span>N</span> · 15° · 30° · <span>NE</span> · 60° · 75° · 
+                <span>E</span> · 105° · 120° · <span>SE</span> · 150° · 165° · 
+                <span>S</span> · 195° · 210° · <span>SW</span> · 240° · 255° · 
+                <span>W</span> · 285° · 300° · <span>NW</span> · 330° · 345° · 
+                <span>N</span> · 15° · 30° · <span>NE</span> · 60° · 75° · 
+                <span>E</span> · 105° · 120° · <span>SE</span> · 150° · 165° · 
+                <span>S</span> · 195° · 210° · <span>SW</span> · 240° · 255° · 
+                <span>W</span> · 285° · 300° · <span>NW</span>
+              </div>
+            </div>
+            <div id="compass-degrees" class="compass-degrees">090°</div>
+          </div>
+
+          <!-- Dynamic Mini-map & Turn Advisor -->
+          <div class="minimap-panel">
+            <div class="turn-advisor">
+              <div id="turn-label" class="turn-label">MAIN STRAIGHT</div>
+              <div id="turn-chevron" class="chevron straight">▲▲▲</div>
+            </div>
+            <canvas id="minimap-canvas" width="220" height="100"></canvas>
+          </div>
+        </div>
+
+        <!-- Top Right: Menu & Reset Session Buttons -->
+        <div class="header-right">
+          <button id="menu-btn" class="hud-btn menu-btn" title="Open Setup Menu (ESC)">
+            <span class="btn-icon">⚙</span> MENU [ESC]
+          </button>
+          <button id="reset-session-btn" class="hud-btn reset-btn" title="Reset Car and Lap Times">
+            <span class="btn-icon">↺</span> RESET
+          </button>
+        </div>
+      </header>
+
+      <!-- Formula 1 Style Start Lights Gantry Overlay -->
+      <div id="f1-countdown-overlay" class="f1-countdown-overlay">
+        <div class="f1-gantry-bezel">
+          <div class="f1-gantry-title">RACE START SEQUENCE</div>
+          <div class="f1-light-columns">
+            <div class="f1-column"><div id="f1-bulb-0" class="f1-bulb"></div></div>
+            <div class="f1-column"><div id="f1-bulb-1" class="f1-bulb"></div></div>
+            <div class="f1-column"><div id="f1-bulb-2" class="f1-bulb"></div></div>
+            <div class="f1-column"><div id="f1-bulb-3" class="f1-bulb"></div></div>
+            <div class="f1-column"><div id="f1-bulb-4" class="f1-bulb"></div></div>
+          </div>
+          <div id="f1-status-text" class="f1-status-text">HOLD [W] TO REV ENGINE</div>
+        </div>
+      </div>
+
+      <!-- Launch Banner -->
+      <div id="f1-launch-banner" class="f1-launch-banner">🟢 LIGHTS OUT! GO! GO! GO! 🟢</div>
+
+      <!-- Center Lap Toast Notification -->
+      <div id="lap-toast" class="lap-toast">LAP 1 COMPLETED: 00:19.45</div>
+
+      <!-- Right Side Panel: Lap Timing & Lap History -->
+      <aside id="lap-panel" class="hud-panel lap-panel">
+        <div class="panel-header">
+          <span class="panel-title">RACE STANDINGS</span>
+          <span id="lap-counter-badge" class="lap-counter-badge">LAP 1 / 3</span>
+        </div>
+
+        <!-- Position Badge & Race Standings Banner -->
+        <div class="position-hero-card">
+          <div class="pos-hero-top">
+            <span class="pos-label">LIVE POSITION</span>
+            <span id="pos-gap-badge" class="pos-gap-badge">CHASING P3</span>
+          </div>
+          <div class="pos-hero-main">
+            <span id="position-badge" class="position-badge p4">P4</span>
+            <span class="position-total">/ 4</span>
+          </div>
+          <!-- Live 4-Car Driver Standings Strip -->
+          <div id="live-standings-bar" class="live-standings-bar">
+            <!-- Dynamic 4 driver position chips -->
+          </div>
+        </div>
+
+        <!-- Current Lap Time -->
+        <div class="timer-box current-box">
+          <div class="timer-label">CURRENT LAP</div>
+          <div id="current-lap-time" class="timer-value current-time">00:00.00</div>
+        </div>
+
+        <!-- Best Lap Time -->
+        <div class="timer-box best-box">
+          <div class="timer-label">BEST LAP</div>
+          <div id="best-lap-time" class="timer-value best-time">--:--.--</div>
+        </div>
+
+        <!-- Scrollable Lap History List -->
+        <div class="lap-history-wrapper">
+          <div class="history-title">LAP HISTORY</div>
+          <div id="lap-history-list" class="lap-history-list">
+            <div class="lap-item empty">Complete a lap to record time</div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Bottom HUD: Controls info & Speedometer -->
+      <footer id="hud-footer">
+        <!-- Bottom Left: Controls hints & Camera Mode -->
+        <div class="controls-panel">
+          <div id="camera-tag" class="camera-badge">CHASE CAM [C]</div>
+          <div class="controls-grid">
+            <div class="control-row"><kbd>W</kbd> / <kbd>↑</kbd> <span>Accelerate</span></div>
+            <div class="control-row"><kbd>S</kbd> / <kbd>↓</kbd> <span>Brake / Reverse</span></div>
+            <div class="control-row"><kbd>A</kbd> <kbd>D</kbd> / <kbd>←</kbd> <kbd>→</kbd> <span>Steer</span></div>
+            <div class="control-row"><kbd>SPACE</kbd> <span>Handbrake (Drift)</span></div>
+            <div class="control-row"><kbd>C</kbd> <span>Toggle Camera</span></div>
+            <div class="control-row"><kbd>R</kbd> <span>Reset Grid</span></div>
+          </div>
+        </div>
+
+        <!-- Bottom Right / Center: Speedometer Gauge, Gear, RPM -->
+        <div class="speedometer-cluster">
+          <!-- RPM Bar -->
+          <div class="rpm-container">
+            <div class="rpm-labels">
+              <span>RPM</span>
+              <span id="rpm-value">950 RPM</span>
+            </div>
+            <div class="rpm-bar-bg">
+              <div id="rpm-fill" class="rpm-bar-fill"></div>
+            </div>
+            <div class="rpm-ticks">
+              <span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span class="redline">7</span><span class="redline">8</span>
+            </div>
+          </div>
+
+          <div class="gauge-main">
+            <!-- Radial SVG Gauge -->
+            <div class="gauge-arc-wrapper">
+              <svg viewBox="0 0 200 200" class="gauge-svg">
+                <!-- Background track arc -->
+                <circle
+                  cx="100" cy="100" r="80"
+                  class="gauge-bg-arc"
+                  stroke-dasharray="502.65"
+                  stroke-dashoffset="125.66"
+                />
+                <!-- Active dynamic progress arc -->
+                <circle
+                  id="speed-gauge-arc"
+                  cx="100" cy="100" r="80"
+                  class="gauge-fill-arc"
+                  stroke-dasharray="502.65"
+                  stroke-dashoffset="502.65"
+                />
+              </svg>
+
+              <!-- Central Digital Speed readout -->
+              <div class="speed-center-display">
+                <div id="speed-value" class="digital-speed">000</div>
+                <div id="speed-unit-label" class="speed-unit">KM/H</div>
+              </div>
+            </div>
+
+            <!-- Automatic Gear Indicator -->
+            <div class="gear-container">
+              <div class="gear-title">GEAR</div>
+              <div id="gear-value" class="gear-badge">1</div>
+              <div class="gear-sub">AUTO</div>
+            </div>
+          </div>
+        </div>
+      </footer>
+
+    </div>
+
+    <!-- Central Game Setup & Pause Menu Overlay -->
+    <div id="game-menu-overlay" class="game-menu-overlay active">
+      <div class="menu-card">
+        <div class="menu-header">
+          <div class="menu-badge">NIGHTLAP SPEEDWAY</div>
+          <h1 id="menu-title" class="menu-title">RACE SETUP</h1>
+          <p id="menu-subtitle" class="menu-subtitle">Configure your session or press [ESC] to resume</p>
+        </div>
+
+        <!-- Section 1: Number of Laps -->
+        <div class="menu-section">
+          <div class="section-label">
+            <span>NUMBER OF LAPS</span>
+            <span id="selected-laps-display" class="section-value">3 LAPS</span>
+          </div>
+          <div class="options-row" id="laps-options">
+            <button type="button" class="menu-option-btn" data-laps="1">1 LAP</button>
+            <button type="button" class="menu-option-btn active" data-laps="3">3 LAPS</button>
+            <button type="button" class="menu-option-btn" data-laps="5">5 LAPS</button>
+            <button type="button" class="menu-option-btn" data-laps="10">10 LAPS</button>
+          </div>
+        </div>
+
+        <!-- Section 2: Opponent Cars -->
+        <div class="menu-section">
+          <div class="section-label">
+            <span>OPPONENT CARS</span>
+            <span id="selected-opponents-display" class="section-value">3 OPPONENTS (4-CAR RACE)</span>
+          </div>
+          <div class="options-row" id="opponents-options">
+            <button type="button" class="menu-option-btn" data-opponents="0">0 (SOLO)</button>
+            <button type="button" class="menu-option-btn" data-opponents="1">1 (DUEL)</button>
+            <button type="button" class="menu-option-btn" data-opponents="2">2 CARS</button>
+            <button type="button" class="menu-option-btn active" data-opponents="3">3 CARS</button>
+          </div>
+        </div>
+
+        <!-- Section 3: Car Color -->
+        <div class="menu-section">
+          <div class="section-label">
+            <span>CAR LIVERY COLOR</span>
+            <span id="selected-color-name" class="section-value">APEX BLUE</span>
+          </div>
+          <div class="color-palette-grid" id="color-palette">
+            <button type="button" class="color-swatch-btn active" data-color="#00c2ff" data-name="Apex Blue" style="--swatch-color: #00c2ff;" title="Apex Blue"></button>
+            <button type="button" class="color-swatch-btn" data-color="#ff1e42" data-name="Rosso Corsa Red" style="--swatch-color: #ff1e42;" title="Rosso Corsa Red"></button>
+            <button type="button" class="color-swatch-btn" data-color="#eab308" data-name="Cyber Yellow" style="--swatch-color: #eab308;" title="Cyber Yellow"></button>
+            <button type="button" class="color-swatch-btn" data-color="#10b981" data-name="Acid Green" style="--swatch-color: #10b981;" title="Acid Green"></button>
+            <button type="button" class="color-swatch-btn" data-color="#f97316" data-name="Sunset Orange" style="--swatch-color: #f97316;" title="Sunset Orange"></button>
+            <button type="button" class="color-swatch-btn" data-color="#1c1f26" data-name="Stealth Black" style="--swatch-color: #1c1f26;" title="Stealth Black"></button>
+            <button type="button" class="color-swatch-btn" data-color="#f8fafc" data-name="Pearl White" style="--swatch-color: #f8fafc;" title="Pearl White"></button>
+            <button type="button" class="color-swatch-btn" data-color="#8b5cf6" data-name="Ultra Violet" style="--swatch-color: #8b5cf6;" title="Ultra Violet"></button>
+          </div>
+        </div>
+
+        <!-- Section 3: Speed Measurement Unit -->
+        <div class="menu-section">
+          <div class="section-label">
+            <span>SPEEDOMETER UNIT</span>
+            <span id="selected-unit-display" class="section-value">KM/H</span>
+          </div>
+          <div class="options-row" id="unit-options">
+            <button type="button" class="menu-option-btn active" data-unit="kmh">KM/H</button>
+            <button type="button" class="menu-option-btn" data-unit="mph">MILES/H (MPH)</button>
+          </div>
+        </div>
+
+        <!-- Menu Action Buttons -->
+        <div class="menu-actions">
+          <button type="button" id="start-race-btn" class="menu-action-btn primary">
+            <span class="btn-text">▶ START RACE</span>
+          </button>
+          <button type="button" id="restart-race-btn" class="menu-action-btn secondary hidden">
+            <span>↺ RESTART RACE</span>
+          </button>
+        </div>
+
+        <div class="menu-footer-hint">
+          <span>Press <kbd>ESC</kbd> anytime during the race to open menu & pause</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Race Finished Summary Overlay -->
+    <div id="race-finish-overlay" class="game-menu-overlay">
+      <div class="menu-card finish-card">
+        <div class="menu-header">
+          <div class="finish-trophy" id="finish-trophy">🏆</div>
+          <div class="menu-badge finish-badge" id="finish-badge">CHECKERED FLAG</div>
+          <h1 class="menu-title finish-title" id="finish-title">RACE FINISHED!</h1>
+          <p id="finish-subtitle" class="menu-subtitle">Official Session Performance Summary</p>
+        </div>
+
+        <!-- Finishing Podium Banner -->
+        <div id="finish-podium-banner" class="finish-podium-banner p1">
+          <div id="finish-podium-rank" class="podium-rank">P1</div>
+          <div class="podium-info">
+            <div id="finish-podium-title" class="podium-title">1ST PLACE - RACE WINNER! 🥇</div>
+            <div id="finish-podium-sub" class="podium-sub">Sensational driving! You claimed the victory!</div>
+          </div>
+        </div>
+
+        <!-- 4-Car Race Leaderboard Standings Table -->
+        <div class="finish-table-wrapper">
+          <div class="table-title">OFFICIAL RACE LEADERBOARD</div>
+          <div id="finish-leaderboard-table" class="finish-leaderboard-table">
+            <!-- Dynamic driver standings inserted here -->
+          </div>
+        </div>
+
+        <!-- Key Metrics Grid -->
+        <div class="finish-stats-grid">
+          <div class="finish-stat-box primary">
+            <span class="stat-label">TOTAL RACE TIME</span>
+            <span id="finish-total-time" class="stat-value highlight">00:00.00</span>
+          </div>
+          <div class="finish-stat-box gold">
+            <span class="stat-label">★ BEST LAP</span>
+            <span id="finish-best-lap" class="stat-value gold">00:00.00</span>
+          </div>
+          <div class="finish-stat-box">
+            <span class="stat-label">AVG LAP TIME</span>
+            <span id="finish-avg-lap" class="stat-value">00:00.00</span>
+          </div>
+          <div class="finish-stat-box">
+            <span class="stat-label">TOP SPEED</span>
+            <span id="finish-top-speed" class="stat-value">000 KM/H</span>
+          </div>
+        </div>
+
+        <!-- Lap Breakdown Table -->
+        <div class="finish-table-wrapper">
+          <div class="table-title">LAP-BY-LAP BREAKDOWN</div>
+          <div id="finish-laps-table" class="finish-laps-table">
+            <!-- Dynamic lap rows inserted here -->
+          </div>
+        </div>
+
+        <!-- Action Buttons: Play Again & New Race -->
+        <div class="finish-actions">
+          <button type="button" id="play-again-btn" class="menu-action-btn primary play-again-btn">
+            <span class="btn-text">↺ PLAY AGAIN</span>
+          </button>
+          <button type="button" id="new-race-btn" class="menu-action-btn secondary new-race-btn">
+            <span class="btn-text">⚙ NEW RACE</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Game Script Entrypoint -->
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
